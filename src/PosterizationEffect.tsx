@@ -8,7 +8,7 @@ let _uSteps: number;
 // Effect implementation
 class PosterizationEffectImpl extends Effect {
   constructor({ steps = 0.1 } = {}) {
-    super("PosterizationEffect", fragmentShader, {
+    super("PosterizationEffect", `#define TIME_EXISTS 1\n${fragmentShader}`, {
       uniforms: new Map([["steps", new Uniform(steps)]]),
     });
 

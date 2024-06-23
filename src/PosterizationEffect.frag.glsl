@@ -6,6 +6,9 @@ precision lowp float;
 uniform lowp sampler2D map;
 #endif
 uniform float steps;
+#ifndef TIME_EXISTS
+uniform float time;
+#endif
 
 #ifndef PI
 #define PI 3.1415
@@ -61,24 +64,25 @@ vec3 fromOklabPolar(vec3 polar) {
     return oklab;
 }
 
-float hash(vec2 p) {
-    return fract(1e4 * sin(17.0 * p.x + p.y * 0.1) * (0.1 + abs(sin(p.y * 13.0 + p.x))));
+float hash(vec2 p, float t) {
+    return fract(1e4 * sin(17.0 * p.x + p.y * 0.1) * (0.1 + abs(sin(p.y * 13.0 + p.x))) + t);
 }
 
-float noise(vec2 n) {
+float noise(vec2 n, float t) {
     const vec2 d = vec2(0.0, 1.0);
     vec2 b = floor(n), f = smoothstep(vec2(0.0), vec2(1.0), fract(n));
-    return mix(mix(hash(b), hash(b + d.yx), f.x), mix(hash(b + d.xy), hash(b + d.yy), f.x), f.y);
+    return mix(mix(hash(b, t), hash(b + d.yx, t), f.x), mix(hash(b + d.xy, t), hash(b + d.yy, t), f.x), f.y);
 }
 
-float posterize(vec2 n, float c) {
-    return ceil(c * steps - 0.5 * noise(n * 500.0) - 0.25) / steps;
+float posterize(vec2 n, float c, float t) {
+    return ceil(c * steps - 0.5 * noise(n * 250.0, 0.2 * ceil(t * 5.0)) - 0.25) / steps;
+    // return ceil(c * steps - 0.5) / steps;
 }
 
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
     vec4 texel = texture2D(map, uv);
     vec3 lch = toOklabPolar(lsrgb2oklab(texel.rgb));
-    float l = posterize(uv, lch.x);
-    vec3 posterized = oklab2lsrgb(fromOklabPolar(vec3(l, lch.y, lch.z + (l - 0.5) * 2.0)));
+    float l = posterize(uv, lch.x, time);
+    vec3 posterized = oklab2lsrgb(fromOklabPolar(vec3(l, 0.5 - abs(l - 0.5), posterize(uv, lch.z, time) + (l - 0.5) * 1.0)));
     outputColor = vec4(posterized, texel.a);
 }
